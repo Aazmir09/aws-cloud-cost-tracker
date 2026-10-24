@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Cost Tracker</title>
+
+  <!-- Chart.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 30px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0b1120;
+      color: #e5e7eb;
+    }
+
+    header {
+      margin-bottom: 25px;
+    }
+
+    header h1 {
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    header p {
+      color: #94a3b8;
+    }
+
+    .tag {
+      color: #38bdf8;
+      font-size: 13px;
+    }
+
+    /* Task 2: Alert Banner Styles */
+    .alert-banner {
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 500;
+    }
+
+    .alert-ok {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid #10b981;
+      color: #34d399;
+    }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid #f59e0b;
+      color: #fbbf24;
+    }
+
+    .alert-critical {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .card {
+      background: #111c30;
+      border: 1px solid #26354d;
+      padding: 22px;
+      border-radius: 12px;
+    }
+
+    .card h3 {
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: normal;
+      margin-top: 0;
+    }
+
+    .amount {
+      font-size: 30px;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+
+    .section-title {
+      margin: 0 0 15px;
+      font-size: 18px;
+      color: #f3f4f6;
+    }
+
+    .progress {
+      height: 10px;
+      background: #26354d;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .progress div {
+      width: 0%;
+      height: 100%;
+      background: #38bdf8;
+      transition: width 0.5s ease, background-color 0.3s ease;
+    }
+
+    /* Task 2: Budget Controls */
+    .budget-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .budget-control input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      width: 100px;
+      font-size: 14px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 14px 8px;
+      border-bottom: 1px solid #26354d;
+    }
+
+    th {
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    .bar {
+      height: 8px;
+      background: #26354d;
+      border-radius: 8px;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      background: #38bdf8;
+      border-radius: 8px;
+      transition: width 0.5s ease;
+    }
+
+    button {
+      background: #0284c7;
+      color: white;
+      border: 0;
+      padding: 8px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    button:hover {
+      background: #0369a1;
+    }
+
+    .note {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-top: 25px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+
+    .status-loading {
+      background: #334155;
+      color: #94a3b8;
+    }
+
+    .status-success {
+      background: #065f46;
+      color: #34d399;
+    }
+
+    .status-error {
+      background: #991b1b;
+      color: #fca5a5;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 260px;
+      width: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 16px;
+      }
+
+      .amount {
+        font-size: 25px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="tag">AWS PROJECT · COST MONITORING</div>
+    <h1>Cloud Cost Tracker <span id="statusBadge" class="status-badge status-loading">Connecting...</span></h1>
+    <p>Monitor spending, track your budget, and receive threshold alerts in real time.</p>
+    <span id="subHeaderTag" class="tag">FETCHING LIVE AWS DATA</span>
+  </header>
+
+  <!-- Dynamic Alert Status Banner -->
+  <div id="alertBanner" class="alert-banner alert-ok">
+    <div id="alertMessage">Checking spending thresholds against budget target...</div>
+    <div id="projectedSpend" style="font-size: 13px; opacity: 0.9;">Projected Monthly: $0.00</div>
+  </div>
+
+  <!-- Metric Cards -->
+  <div class="grid">
+    <div class="card">
+      <h3>30-Day Total Spend</h3>
+      <div id="totalSpend" class="amount">$0.00</div>
+      <div id="dateRange" class="small">Loading range...</div>
+    </div>
+
+    <div class="card">
+      <h3>Monthly Target Budget</h3>
+      <div class="budget-control">
+        <span style="font-size: 20px; font-weight: bold; color: #fff;">$</span>
+        <input type="number" id="budgetInput" value="10.00" step="1" min="1">
+        <button onclick="updateBudget()">Set</button>
+      </div>
+      <div class="small">Adjust target threshold dynamically</div>
+    </div>
+
+    <div class="card">
+      <h3>Budget Remaining</h3>
+      <div id="budgetRemaining" class="amount">$10.00</div>
+      <div id="remainingSubtext" class="small">Calculating...</div>
+    </div>
+
+    <div class="card">
+      <h3>Budget Used</h3>
+      <div id="budgetUsedPct" class="amount">0.0%</div>
+      <div class="progress">
+        <div id="progressBar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div class="charts-grid">
+    <div class="card">
+      <h2 class="section-title">Daily Spending Trend (Past 30 Days)</h2>
+      <div class="chart-container">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="section-title">Service Share</h2>
+      <div class="chart-container">
+        <canvas id="serviceChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table Breakdown -->
+  <div class="card">
+    <h2 class="section-title">AWS Service Costs Breakdown</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th>
+          <th>Cost</th>
+          <th>Share of Total Spend</th>
+        </tr>
+      </thead>
+      <tbody id="servicesTableBody">
+        <tr>
+          <td colspan="3" style="text-align: center; color: #94a3b8;">Loading services...</td>
+        </tr>
+      </tbody>
+    </table>
+    <button style="margin-top: 15px;" onclick="downloadReport()">Download CSV Report</button>
+  </div>
+
+  <p class="note" id="footerNote">
+    Connected to backend via Nginx reverse proxy at <code>/api/costs</code> querying live AWS Cost Explorer APIs.
+  </p>
+
+  <script>
+    // Relative path routed through Nginx reverse proxy
+    const API_URL = "/api/costs";
+    let budgetLimit = parseFloat(localStorage.getItem("cloud_budget_target")) || 10.00;
+    let liveCostData = null;
+    let dailyChartInstance = null;
+    let serviceChartInstance = null;
+
+    document.getElementById("budgetInput").value = budgetLimit.toFixed(2);
+
+    function updateBudget() {
+      const val = parseFloat(document.getElementById("budgetInput").value);
+      if (val && val > 0) {
+        budgetLimit = val;
+        localStorage.setItem("cloud_budget_target", budgetLimit);
+        if (liveCostData) {
+          renderDashboard(liveCostData);
+        }
+      }
+    }
+
+    async function fetchCosts() {
+      const statusBadge = document.getElementById("statusBadge");
+      const subHeaderTag = document.getElementById("subHeaderTag");
+
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`Server returned HTTP ${response.status}`);
+        }
+
+        liveCostData = await response.json();
+
+        statusBadge.textContent = "LIVE DATA";
+        statusBadge.className = "status-badge status-success";
+        subHeaderTag.textContent = `LIVE AWS METRICS (${liveCostData.start_date} TO ${liveCostData.end_date_exclusive})`;
+
+        renderDashboard(liveCostData);
+        renderCharts(liveCostData);
+      } catch (err) {
+        console.error("Failed to load cost data:", err);
+        statusBadge.textContent = "CONNECTION ERROR";
+        statusBadge.className = "status-badge status-error";
+        subHeaderTag.textContent = "OFFLINE — ENSURE PYTHON APP.PY IS RUNNING";
+
+        document.getElementById("servicesTableBody").innerHTML = `
+          <tr>
+            <td colspan="3" style="text-align: center; color: #fca5a5; padding: 20px;">
+              Failed to connect to backend at <code>${API_URL}</code>.<br>
+              Make sure your Docker container stack is running.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderDashboard(data) {
+      const total = data.total || 0;
+      const remaining = Math.max(0, budgetLimit - total);
+      const usedPct = (total / budgetLimit) * 100;
+
+      document.getElementById("totalSpend").textContent = formatCurrency(total);
+      document.getElementById("dateRange").textContent = `${data.start_date} to ${data.end_date_exclusive}`;
+      document.getElementById("budgetRemaining").textContent = formatCurrency(remaining);
+      document.getElementById("remainingSubtext").textContent = total > budgetLimit ? "Budget exceeded" : "Within target limit";
+      document.getElementById("budgetUsedPct").textContent = `${usedPct.toFixed(1)}%`;
+
+      const progressBar = document.getElementById("progressBar");
+      progressBar.style.width = `${Math.min(100, usedPct)}%`;
+      if (usedPct >= 100) {
+        progressBar.style.backgroundColor = "#ef4444";
+      } else if (usedPct >= 80) {
+        progressBar.style.backgroundColor = "#f59e0b";
+      } else {
+        progressBar.style.backgroundColor = "#38bdf8";
+      }
+
+      const alertBanner = document.getElementById("alertBanner");
+      const alertMessage = document.getElementById("alertMessage");
+      const projectedSpend = document.getElementById("projectedSpend");
+
+      const dailyAverage = data.daily && data.daily.length > 0 ? (total / data.daily.length) : 0;
+      const projectedTotal = dailyAverage * 30;
+      projectedSpend.textContent = `Projected 30-Day Run Rate: ${formatCurrency(projectedTotal)}`;
+
+      if (usedPct >= 100) {
+        alertBanner.className = "alert-banner alert-critical";
+        alertMessage.textContent = `CRITICAL ALERT: Spending (${formatCurrency(total)}) has exceeded your $${budgetLimit.toFixed(2)} budget target!`;
+      } else if (usedPct >= 80) {
+        alertBanner.className = "alert-banner alert-warning";
+        alertMessage.textContent = `WARNING: Spending (${formatCurrency(total)}) is at ${usedPct.toFixed(1)}% of your $${budgetLimit.toFixed(2)} budget threshold.`;
+      } else {
+        alertBanner.className = "alert-banner alert-ok";
+        alertMessage.textContent = `STATUS NORMAL: Spending is within normal limits (${usedPct.toFixed(1)}% of $${budgetLimit.toFixed(2)} target).`;
+      }
+
+      const tableBody = document.getElementById("servicesTableBody");
+      tableBody.innerHTML = "";
+
+      if (!data.services || data.services.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="3" style="text-align: center;">No active services recorded in this period.</td></tr>`;
+        return;
+      }
+
+      data.services.forEach(svc => {
+        const cost = svc.cost;
+        const sharePct = total > 0 ? (cost / total) * 100 : 0;
+        const barWidth = cost > 0 ? Math.min(100, Math.max(2, sharePct)) : 0;
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${svc.name}</td>
+          <td>${formatCurrency(cost)}</td>
+          <td>
+            <div class="bar"><span style="width: ${barWidth}%"></span></div>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    function renderCharts(data) {
+      const dailyDates = (data.daily || []).map(d => d.date.slice(5));
+      const dailyCosts = (data.daily || []).map(d => d.cost);
+
+      const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+      if (dailyChartInstance) dailyChartInstance.destroy();
+
+      dailyChartInstance = new Chart(ctxDaily, {
+        type: 'line',
+        data: {
+          labels: dailyDates,
+          datasets: [{
+            label: 'Daily Cost ($)',
+            data: dailyCosts,
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } }
+          }
+        }
+      });
+
+      const activeServices = (data.services || []).filter(s => s.cost > 0);
+      const serviceLabels = activeServices.map(s => s.name);
+      const serviceData = activeServices.map(s => s.cost);
+
+      const ctxService = document.getElementById('serviceChart').getContext('2d');
+      if (serviceChartInstance) serviceChartInstance.destroy();
+
+      serviceChartInstance = new Chart(ctxService, {
+        type: 'doughnut',
+        data: {
+          labels: serviceLabels.length > 0 ? serviceLabels : ['No Active Spend'],
+          datasets: [{
+            data: serviceData.length > 0 ? serviceData : [1],
+            backgroundColor: [
+              '#38bdf8', '#818cf8', '#c084fc', '#f472b6',
+              '#fb7185', '#34d399', '#fbbf24', '#94a3b8'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 }
+            }
+          }
+        }
+      });
+    }
+
+    function formatCurrency(amount) {
+      if (amount > 0 && amount < 0.01) {
+        return `< $0.01`;
+      }
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
+    }
+
+    function downloadReport() {
+      if (!liveCostData) {
+        alert("No live data available to download yet.");
+        return;
+      }
+
+      const rows = [
+        ["Cloud Cost Tracker — Live AWS Cost Report"],
+        [`Period: ${liveCostData.start_date} to ${liveCostData.end_date_exclusive}`],
+        [`Total Spend: $${liveCostData.total.toFixed(6)}`],
+        [`Target Budget: $${budgetLimit.toFixed(2)}`],
+        [],
+        ["Service Name", "Cost (USD)"]
+      ];
+
+      liveCostData.services.forEach(s => {
+        rows.push([`"${s.name}"`, s.cost.toFixed(6)]);
+      });
+
+      const csvContent = rows.map(e => e.join(",")).join("\n");
+      const file = new Blob([csvContent], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(file);
+      link.download = `aws-cost-report-${liveCostData.end_date_exclusive}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    fetchCosts();
+  </script>
+</body>
+
+</html>

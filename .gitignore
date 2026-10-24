@@ -1,0 +1,35 @@
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+
+# Terraform local files and state
+terraform/response.json
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+*.tfplan
+*.plan
+
+# AWS credentials
+.aws/
+credentials
+config
+
+# Generated reports and archives
+reports/*
+!reports/.gitkeep
+lambda/*.zip
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
